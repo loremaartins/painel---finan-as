@@ -1,1 +1,151 @@
 # painel---finan-as
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Finanças</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>💰 Painel de Finanças</h1>
+    <p>Controle suas entradas e saídas</p>
+  </header>
+
+  <div class="cartoes">
+    <div class="cartao receita">
+      <h3>📈 Entradas</h3>
+      <p class="valor" id="total-receita">R$ 0,00</p>
+    </div>
+    <div class="cartao despesa">
+      <h3>📉 Saídas</h3>
+      <p class="valor" id="total-despesa">R$ 0,00</p>
+    </div>
+    <div class="cartao saldo">
+      <h3>💵 Saldo</h3>
+      <p class="valor" id="saldo-total">R$ 0,00</p>
+    </div>
+  </div>
+
+  <section class="formulario">
+    <h2>➕ Nova Transação</h2>
+    <input type="text" id="descricao" placeholder="Descrição (ex: Salário, Aluguel...)" required>
+    <input type="number" id="valor" step="0.01" min="0.01" placeholder="Valor R$" required>
+    <select id="tipo">
+      <option value="receita">💵 Receita (Entrada)</option>
+      <option value="despesa">💸 Despesa (Saída)</option>
+    </select>
+    <button onclick="adicionarTransacao()">Adicionar</button>
+  </section>
+
+  <section class="lista">
+    <h2>📋 Histórico</h2>
+    <div id="lista-transacoes"></div>
+    <p id="vazio" class="vazio">Nenhuma transação cadastrada ainda ✨</p>
+  </section>
+</div>
+
+<script>
+let transacoes = [];
+
+function carregarDados() {
+  const salvas = localStorage.getItem('financas');
+  if (salvas) transacoes = JSON.parse(salvas);
+  atualizarTela();
+}
+
+function salvarDados() {
+  localStorage.setItem('financas', JSON.stringify(transacoes));
+}
+
+function adicionarTransacao() {
+  const descricao = document.getElementById('descricao').value.trim();
+  const valor = parseFloat(document.getElementById('valor').value);
+  const tipo = document.getElementById('tipo').value;
+
+  if (!descricao || isNaN(valor) || valor <= 0) {
+    alert('Preencha todos os campos corretamente!');
+    return;
+  }
+
+  transacoes.unshift({
+    id: Date.now(),
+    descricao,
+    valor,
+    tipo,
+    data: new Date().toLocaleDateString('pt-BR')
+  });
+
+  salvarDados();
+  atualizarTela();
+
+  document.getElementById('descricao').value = '';
+  document.getElementById('valor').value = '';
+}
+
+function removerTransacao(id) {
+  if (confirm('Excluir esta transação?')) {
+    transacoes = transacoes.filter(t => t.id !== id);
+    salvarDados();
+    atualizarTela();
+  }
+}
+
+function formatarValor(valor) {
+  return 'R$ ' + valor.toFixed(2).replace('.', ',');
+}
+
+function atualizarTela() {
+  let totalReceita = 0;
+  let totalDespesa = 0;
+
+  transacoes.forEach(t => {
+    if (t.tipo === 'receita') totalReceita += t.valor;
+    else totalDespesa += t.valor;
+  });
+
+  const saldo = totalReceita - totalDespesa;
+
+  document.getElementById('total-receita').textContent = formatarValor(totalReceita);
+  document.getElementById('total-despesa').textContent = formatarValor(totalDespesa);
+  document.getElementById('saldo-total').textContent = formatarValor(saldo);
+  
+  const elementoSaldo = document.getElementById('saldo-total');
+  elementoSaldo.parentElement.className = 'cartao saldo ' + (saldo >= 0 ? 'positivo' : 'negativo');
+
+  const lista = document.getElementById('lista-transacoes');
+  const vazio = document.getElementById('vazio');
+  lista.innerHTML = '';
+
+  if (transacoes.length === 0) {
+    vazio.style.display = 'block';
+    return;
+  }
+  
+  vazio.style.display = 'none';
+
+  transacoes.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'transacao ' + t.tipo;
+    item.innerHTML = `
+      <div class="info">
+        <strong>${t.descricao}</strong>
+        <span class="data">${t.data}</span>
+      </div>
+      <div class="valor-item">
+        ${t.tipo === 'receita' ? '+' : '-'} ${formatarValor(t.valor)}
+        <button class="btn-excluir" onclick="removerTransacao(${t.id})">✕</button>
+      </div>
+    `;
+    lista.appendChild(item);
+  });
+}
+
+carregarDados();
+</script>
+
+</body>
+</html>
